@@ -4,162 +4,81 @@
 snd_soc_rt5659
 ```
 # 声音修复
-/usr/share/alsa/ucm2/conf.d/cht-bsw-rt5659/ 文件夹下
+/usr/share/alsa/ucm2/Intel/cht-bsw-rt5659/ 文件夹下
 cht-bsw-rt5659.conf
 ```
-Syntax 2
+Syntax 3
 
 SectionUseCase."HiFi" {
-	File "HiFi.conf"
+	File "/Intel/cht-bsw-rt5659/HiFi.conf"
 	Comment "Default"
 }
 ```
 HiFi.conf
 ```
 SectionVerb {
+	If.Controls {
+		Condition {
+			Type ControlExists
+			Control "name='media0_in Gain 0 Switch'"
+		}
+		Before.EnableSequence "0"
+		True {
+			Include.pe.File "/platforms/bytcr/PlatformEnableSeq.conf"
+			Include.pd.File "/platforms/bytcr/PlatformDisableSeq.conf"
+		}
+	}
 
     EnableSequence [
-	    # media mixer settings
-	    #   compress
-	    cset "name='media0_in Gain 0 Switch' on"
-	    cset "name='media0_in Gain 0 Volume' 0"
-
-	    #   normal
-	    cset "name='media1_in Gain 0 Switch' on"
-	    cset "name='media1_in Gain 0 Volume' 0"
-	    #   swm loopback
-	    cset "name='media2_in Gain 0 Switch' off"
-	    cset "name='media2_in Gain 0 Volume' 0%"
-	    #   deep buffer
-	    cset "name='media3_in Gain 0 Switch' on"
-	    cset "name='media3_in Gain 0 Volume' 0"
-
-	    cset "name='media0_out mix 0 media0_in Switch' on"
-	    cset "name='media0_out mix 0 media1_in Switch' on"
-	    cset "name='media0_out mix 0 media2_in Switch' off"
-	    cset "name='media0_out mix 0 media3_in Switch' on"
-
-	    cset "name='media1_out mix 0 media0_in Switch' off"
-	    cset "name='media1_out mix 0 media1_in Switch' off"
-	    cset "name='media1_out mix 0 media2_in Switch' off"
-	    cset "name='media1_out mix 0 media3_in Switch' off"
-
-	    cset "name='pcm0_in Gain 0 Switch' on"
-	    cset "name='pcm0_in Gain 0 Volume' 0"
-
-	    cset "name='pcm1_in Gain 0 Switch' off"
-	    cset "name='pcm1_in Gain 0 Volume' 0%"
-
-	    # codec0_out settings (used if SSP2 is connected)
-	    cset "name='codec_out0 mix 0 codec_in0 Switch' off"
-	    cset "name='codec_out0 mix 0 codec_in1 Switch' off"
-	    cset "name='codec_out0 mix 0 media_loop1_in Switch' off"
-	    cset "name='codec_out0 mix 0 media_loop2_in Switch' off"
-	    cset "name='codec_out0 mix 0 pcm0_in Switch' on"
-	    cset "name='codec_out0 mix 0 pcm1_in Switch' off"
-	    cset "name='codec_out0 mix 0 sprot_loop_in Switch' off"
-	    cset "name='codec_out0 Gain 0 Switch' on"
-	    cset "name='codec_out0 Gain 0 Volume' 6"
-
-	    # modem_out settings (used if SSP0 is connected)
-	    cset "name='modem_out mix 0 codec_in0 Switch' off"
-	    cset "name='modem_out mix 0 codec_in1 Switch' off"
-	    cset "name='modem_out mix 0 media_loop1_in Switch' off"
-	    cset "name='modem_out mix 0 media_loop2_in Switch' off"
-	    cset "name='modem_out mix 0 pcm0_in Switch' on"
-	    cset "name='modem_out mix 0 pcm1_in Switch' off"
-	    cset "name='modem_out mix 0 sprot_loop_in Switch' off"
-	    cset "name='modem_out Gain 0 Switch' on"
-	    cset "name='modem_out Gain 0 Volume' 0"
-
-	    # input settings
-
-	    # input used when SSP2 is connected
-	    cset "name='codec_in0 Gain 0 Switch' on"
-	    cset "name='codec_in0 Gain 0 Volume' 0"
-
-	    # input used when SSP0 is connected
-	    cset "name='modem_in Gain 0 Switch' on"
-	    cset "name='modem_in Gain 0 Volume' 0"
-
-	    # pcm1_out settings
-	    cset "name='pcm1_out mix 0 codec_in0 Switch' on"
-	    cset "name='pcm1_out mix 0 modem_in Switch' on"
-	    cset "name='pcm1_out mix 0 codec_in1 Switch' off"
-	    cset "name='pcm1_out mix 0 media_loop1_in Switch' off"
-	    cset "name='pcm1_out mix 0 media_loop2_in Switch' off"
-	    cset "name='pcm1_out mix 0 pcm0_in Switch' off"
-	    cset "name='pcm1_out mix 0 pcm1_in Switch' off"
-	    cset "name='pcm1_out mix 0 sprot_loop_in Switch' off"
-
-	    cset "name='pcm1_out Gain 0 Switch' on"
-	    cset "name='pcm1_out Gain 0 Volume' 0"
-
-	    # disable codec_out1
-	    cset "name='codec_out1 mix 0 codec_in0 Switch' off"
-	    cset "name='codec_out1 mix 0 codec_in1 Switch' off"
-	    cset "name='codec_out1 mix 0 media_loop1_in Switch' off"
-	    cset "name='codec_out1 mix 0 media_loop2_in Switch' off"
-	    cset "name='codec_out1 mix 0 pcm0_in Switch' off"
-	    cset "name='codec_out1 mix 0 pcm1_in Switch' off"
-	    cset "name='codec_out1 mix 0 sprot_loop_in Switch' off"
-	    cset "name='codec_out1 Gain 0 Switch' off"
-	    cset "name='codec_out1 Gain 0 Volume' 0%"
-
-	    # disable codec_in1
-	    cset "name='codec_in1 Gain 0 Switch' off"
-	    cset "name='codec_in1 Gain 0 Volume' 0%"
-
-	    # disable all loops
-	    cset "name='media_loop1_out mix 0 codec_in0 Switch' off"
-	    cset "name='media_loop1_out mix 0 codec_in1 Switch' off"
-	    cset "name='media_loop1_out mix 0 media_loop1_in Switch' off"
-	    cset "name='media_loop1_out mix 0 media_loop2_in Switch' off"
-	    cset "name='media_loop1_out mix 0 pcm0_in Switch' off"
-	    cset "name='media_loop1_out mix 0 pcm1_in Switch' off"
-	    cset "name='media_loop1_out mix 0 sprot_loop_in Switch' off"
-
-	    cset "name='media_loop2_out mix 0 codec_in0 Switch' off"
-	    cset "name='media_loop2_out mix 0 codec_in1 Switch' off"
-	    cset "name='media_loop2_out mix 0 media_loop1_in Switch' off"
-	    cset "name='media_loop2_out mix 0 media_loop2_in Switch' off"
-	    cset "name='media_loop2_out mix 0 pcm0_in Switch' off"
-	    cset "name='media_loop2_out mix 0 pcm1_in Switch' off"
-	    cset "name='media_loop2_out mix 0 sprot_loop_in Switch' off"
-
-	    cset "name='sprot_loop_out mix 0 codec_in0 Switch' off"
-	    cset "name='sprot_loop_out mix 0 codec_in1 Switch' off"
-	    cset "name='sprot_loop_out mix 0 media_loop1_in Switch' off"
-	    cset "name='sprot_loop_out mix 0 media_loop2_in Switch' off"
-	    cset "name='sprot_loop_out mix 0 pcm0_in Switch' off"
-	    cset "name='sprot_loop_out mix 0 pcm1_in Switch' off"
-	    cset "name='sprot_loop_out mix 0 sprot_loop_in Switch' off"
-	    
-	    cset "name='IF2 ADC Mux' DAC_REF"
-	    cset "name='IF3 ADC Mux' IF_ADC1"
-	    # 音量放大100%
-	    cset "name='DAC1 Playback Volume' 175"
+		cset "name='codec_out0 Gain 0 Volume' 72%"
+		cset "name='IF2 ADC Mux' DAC_REF"
+		cset "name='IF3 ADC Mux' IF_ADC1"
+		# 音量50%
+		# cset "name='DAC1 Playback Volume' 50%"
+		# 设置右扬声器使用右声道
+		cset "name='Amp Input1' Rihgt" 
     ]
 
 	DisableSequence [
 
 	]
+
+	Value {
+		PlaybackPCM "hw:${CardId}"
+		# The speaker ampl. path on the 5659 has no speaker vol control
+		# Use the digital DAC1 master control as MixerElem
+		# PlaybackMixerElem "DAC1"
+		# PlaybackVolume "DAC1 Playback Volume"
+		# PlaybackSwitch "DAC1 Playback Switch"
+		# PlaybackVolumeScale "0-155:0-100%log"
+	}
 }
 
-SectionDevice."Speaker".0 {
-	Value {
+SectionDevice."Speaker" {
+	Comment "Stereo Speakers"
 
+	ConflictingDevice [
+		# 还没实现，取消注释就报错了
+		# "Headphones"
+	]
+
+	Value {
+		# The speaker ampl. path on the 5659 has no speaker vol control
+		# Use the digital DAC1 master control as MixerElem
+		PlaybackMixerElem "DAC1"
+		PlaybackVolume "DAC1 Playback Volume"
+		PlaybackSwitch "DAC1 Playback Switch"
 	}
 
 	EnableSequence [
-
+		cset "name='DAC1 Playback Switch' on"
 	]
 	DisableSequence [
-
+		cset "name='DAC1 Playback Switch' off"
 	]
 }
 ```
-# 设置声卡模式
+# ~~设置声卡模式~~ 以下内容不需要了，已经修复
 ## 安装声音调整面板
 ```bash
 apt install pavucontrol
@@ -168,7 +87,7 @@ apt install pavucontrol
 配置 -> Built-in Audio -> 专业音频(Pro Audio)
 
 # 至此声音设备正常识别，如果没有识别尝试以下配置
-# pipewire设备识别不正常
+## pipewire设备识别不正常
 /usr/share/pipewire/pipewire.conf 249行新增。参照Dummy-Driver配置后添加即可
 ```
     { factory = spa-node-factory
