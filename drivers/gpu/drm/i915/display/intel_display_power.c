@@ -495,12 +495,6 @@ out_verify:
 	return ret;
 }
 
-static const struct i915_power_well_instance *
-i915_power_well_instance(const struct i915_power_well *power_well)
-{
-	return &power_well->desc->instances->list[power_well->instance_idx];
-}
-
 static void
 __intel_display_power_get_domain(struct drm_i915_private *dev_priv,
 				 enum intel_display_power_domain domain)
