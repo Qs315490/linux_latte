@@ -4,13 +4,17 @@
 snd_soc_rt5659
 ```
 # 声音修复
-/usr/share/alsa/ucm2/Intel/cht-bsw-rt5659/ 文件夹下
+注意。如果开机后右扬声器没声音，请执行以下命令。无需root，普通用户执行。
+```bash
+amixer -c0 cset "name='Amp Input1' Rihgt"
+```
+/usr/share/alsa/ucm2/conf.d/cht-bsw-rt5659/ 文件夹下
 cht-bsw-rt5659.conf
 ```
 Syntax 3
 
 SectionUseCase."HiFi" {
-	File "/Intel/cht-bsw-rt5659/HiFi.conf"
+	File "HiFi.conf"
 	Comment "Default"
 }
 ```
