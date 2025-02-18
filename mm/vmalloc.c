@@ -1816,7 +1816,7 @@ static void free_vmap_area(struct vmap_area *va)
 static inline void
 preload_this_cpu_lock(spinlock_t *lock, gfp_t gfp_mask, int node)
 {
-	struct vmap_area *va = NULL;
+	struct vmap_area *va = NULL, *tmp;
 
 	/*
 	 * Preload this CPU with one extra vmap_area object. It is used
@@ -1832,7 +1832,8 @@ preload_this_cpu_lock(spinlock_t *lock, gfp_t gfp_mask, int node)
 
 	spin_lock(lock);
 
-	if (va && __this_cpu_cmpxchg(ne_fit_preload_node, NULL, va))
+	tmp = NULL;
+	if (va && !__this_cpu_try_cmpxchg(ne_fit_preload_node, &tmp, va))
 		kmem_cache_free(vmap_area_cachep, va);
 }
 
@@ -2055,8 +2056,8 @@ overflow:
 	}
 
 	if (!(gfp_mask & __GFP_NOWARN) && printk_ratelimit())
-		pr_warn("vmap allocation for size %lu failed: use vmalloc=<size> to increase size\n",
-			size);
+		pr_warn("vmalloc_node_range for size %lu failed: Address range restricted to %#lx - %#lx\n",
+				size, vstart, vend);
 
 	kmem_cache_free(vmap_area_cachep, va);
 	return ERR_PTR(-EBUSY);
@@ -2190,6 +2191,7 @@ static void purge_vmap_node(struct work_struct *work)
 {
 	struct vmap_node *vn = container_of(work,
 		struct vmap_node, purge_work);
+	unsigned long nr_purged_pages = 0;
 	struct vmap_area *va, *n_va;
 	LIST_HEAD(local_list);
 
@@ -2207,7 +2209,7 @@ static void purge_vmap_node(struct work_struct *work)
 			kasan_release_vmalloc(orig_start, orig_end,
 					      va->va_start, va->va_end);
 
-		atomic_long_sub(nr, &vmap_lazy_nr);
+		nr_purged_pages += nr;
 		vn->nr_purged++;
 
 		if (is_vn_id_valid(vn_id) && !vn->skip_populate)
@@ -2217,6 +2219,8 @@ static void purge_vmap_node(struct work_struct *work)
 		/* Go back to global. */
 		list_add(&va->list, &local_list);
 	}
+
+	atomic_long_sub(nr_purged_pages, &vmap_lazy_nr);
 
 	reclaim_list_global(&local_list);
 }
@@ -2625,6 +2629,7 @@ static void *new_vmap_block(unsigned int order, gfp_t gfp_mask)
 	vb->dirty_max = 0;
 	bitmap_set(vb->used_map, 0, (1UL << order));
 	INIT_LIST_HEAD(&vb->free_list);
+	vb->cpu = raw_smp_processor_id();
 
 	xa = addr_to_vb_xa(va->va_start);
 	vb_idx = addr_to_vb_idx(va->va_start);
@@ -2641,7 +2646,6 @@ static void *new_vmap_block(unsigned int order, gfp_t gfp_mask)
 	 * integrity together with list_for_each_rcu from read
 	 * side.
 	 */
-	vb->cpu = raw_smp_processor_id();
 	vbq = per_cpu_ptr(&vmap_block_queue, vb->cpu);
 	spin_lock(&vbq->lock);
 	list_add_tail_rcu(&vb->free_list, &vbq->free);
@@ -3583,15 +3587,8 @@ vm_area_alloc_pages(gfp_t gfp, int nid,
 			page = alloc_pages_noprof(alloc_gfp, order);
 		else
 			page = alloc_pages_node_noprof(nid, alloc_gfp, order);
-		if (unlikely(!page)) {
-			if (!nofail)
-				break;
-
-			/* fall back to the zero order allocations */
-			alloc_gfp |= __GFP_NOFAIL;
-			order = 0;
-			continue;
-		}
+		if (unlikely(!page))
+			break;
 
 		/*
 		 * Higher order allocations must be able to be treated as

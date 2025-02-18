@@ -76,6 +76,7 @@ struct rvu_debugfs {
 	struct dump_ctx nix_cq_ctx;
 	struct dump_ctx nix_rq_ctx;
 	struct dump_ctx nix_sq_ctx;
+	struct dump_ctx nix_tm_ctx;
 	struct cpt_ctx cpt_ctx[MAX_CPT_BLKS];
 	int npa_qsize_id;
 	int nix_qsize_id;
@@ -318,6 +319,7 @@ struct nix_mark_format {
 
 /* smq(flush) to tl1 cir/pir info */
 struct nix_smq_tree_ctx {
+	u16 schq;
 	u64 cir_off;
 	u64 cir_val;
 	u64 pir_off;
@@ -327,8 +329,6 @@ struct nix_smq_tree_ctx {
 /* smq flush context */
 struct nix_smq_flush_ctx {
 	int smq;
-	u16 tl1_schq;
-	u16 tl2_schq;
 	struct nix_smq_tree_ctx smq_tree_ctx[NIX_TXSCH_LVL_CNT];
 };
 
@@ -799,6 +799,7 @@ int rvu_lf_reset(struct rvu *rvu, struct rvu_block *block, int lf);
 int rvu_get_blkaddr(struct rvu *rvu, int blktype, u16 pcifunc);
 int rvu_poll_reg(struct rvu *rvu, u64 block, u64 offset, u64 mask, bool zero);
 int rvu_get_num_lbk_chans(void);
+int rvu_ndc_sync(struct rvu *rvu, int lfblkid, int lfidx, u64 lfoffset);
 int rvu_get_blkaddr_from_slot(struct rvu *rvu, int blktype, u16 pcifunc,
 			      u16 global_slot, u16 *slot_in_block);
 
