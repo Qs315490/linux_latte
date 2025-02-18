@@ -1466,10 +1466,6 @@ connect_abort:
 static int smc_connect_check_aclc(struct smc_init_info *ini,
 				  struct smc_clc_msg_accept_confirm *aclc)
 {
-	if (aclc->hdr.typev1 != SMC_TYPE_R &&
-	    aclc->hdr.typev1 != SMC_TYPE_D)
-		return SMC_CLC_DECL_MODEUNSUPP;
-
 	if (aclc->hdr.version >= SMC_V2) {
 		if ((aclc->hdr.typev1 == SMC_TYPE_R &&
 		     !smcr_indicated(ini->smc_type_v2)) ||
@@ -1523,10 +1519,6 @@ static int __smc_connect(struct smc_sock *smc)
 		ini->smcd_version &= ~SMC_V1;
 		ini->smcr_version = 0;
 		ini->smc_type_v1 = SMC_TYPE_N;
-		if (!ini->smcd_version) {
-			rc = SMC_CLC_DECL_GETVLANERR;
-			goto fallback;
-		}
 	}
 
 	rc = smc_find_proposal_devices(smc, ini);
@@ -3367,8 +3359,10 @@ static int __smc_create(struct net *net, struct socket *sock, int protocol,
 	else
 		rc = smc_create_clcsk(net, sk, family);
 
-	if (rc)
+	if (rc) {
 		sk_common_release(sk);
+		sock->sk = NULL;
+	}
 out:
 	return rc;
 }
