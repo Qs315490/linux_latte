@@ -30,3 +30,9 @@ evdev:name:FTSC1000:00 2808:509C Keyboard:dmi:*:svnXiaomiInc:pnMipad2:*
  KEYBOARD_KEY_7002a=back	# Backspace -> back
 
 ```
+
+# 视频解码加速
+arch上libva版本比较新降级即可，2.21.0-1版本可用。  
+arch使用i965驱动解码单元，包名：libva-intel-driver  
+https://github.com/intel/libva/issues/830
+
