@@ -239,7 +239,7 @@ static struct intel_quirk intel_quirks[] = {
 	{ 0x22b0, 0x1d72, 0x1502, quirk_no_vlv_disp_pw_dpio_cmn_bc_init },
 };
 
-static struct intel_dpcd_quirk intel_dpcd_quirks[] = {
+static const struct intel_dpcd_quirk intel_dpcd_quirks[] = {
 	/* Dell Precision 5490 */
 	{
 		.device = 0x7d55,
@@ -280,7 +280,7 @@ void intel_init_dpcd_quirks(struct intel_dp *intel_dp,
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(intel_dpcd_quirks); i++) {
-		struct intel_dpcd_quirk *q = &intel_dpcd_quirks[i];
+		const struct intel_dpcd_quirk *q = &intel_dpcd_quirks[i];
 
 		if (d->device == q->device &&
 		    (d->subsystem_vendor == q->subsystem_vendor ||

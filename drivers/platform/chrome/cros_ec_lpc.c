@@ -707,7 +707,7 @@ static const struct dmi_system_id cros_ec_lpc_dmi_table[] __initconst = {
 		/* Framework Laptop (12th Gen Intel Core) */
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Framework"),
-			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "12th Gen Intel Core"),
+			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "Laptop (12th Gen Intel Core)"),
 		},
 		.driver_data = (void *)&framework_laptop_mec_lpc_driver_data,
 	},
@@ -715,7 +715,7 @@ static const struct dmi_system_id cros_ec_lpc_dmi_table[] __initconst = {
 		/* Framework Laptop (13th Gen Intel Core) */
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Framework"),
-			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "13th Gen Intel Core"),
+			DMI_EXACT_MATCH(DMI_PRODUCT_NAME, "Laptop (13th Gen Intel Core)"),
 		},
 		.driver_data = (void *)&framework_laptop_mec_lpc_driver_data,
 	},
@@ -783,7 +783,7 @@ static struct platform_driver cros_ec_lpc_driver = {
 		.probe_type = PROBE_FORCE_SYNCHRONOUS,
 	},
 	.probe = cros_ec_lpc_probe,
-	.remove_new = cros_ec_lpc_remove,
+	.remove = cros_ec_lpc_remove,
 };
 
 static struct platform_device cros_ec_lpc_device = {
