@@ -861,14 +861,39 @@ static int xiaomi_mipad2_brightness_set(struct led_classdev *led_cdev,
 	return pwm_apply_might_sleep(xiaomi_mipad2_led_pwm, &state);
 }
 
+/* 小米平板2没有设备树提供这些信息。ACPI只注册了这个设备 */
+static const struct software_node rt5659_swnode = {
+	.name = "rt5659",
+	.properties = (const struct property_entry[]) {
+		PROPERTY_ENTRY_U32("realtek,jd-src", 1),
+		{ }
+	},
+};
+
+static int match_rt5659_client(struct device *dev, const void *data)
+{
+	struct acpi_device *adev;
+
+	/* 1. 检查设备名是否为 RT5659 */
+	if (!strstr(dev_name(dev), "10EC5659"))
+		return 0;
+
+	/* 2. 获取 ACPI parent device */
+	/* 直接假设 parent 是 ACPI device（ACPI 创建的 I2C client 必然如此） */
+	adev = to_acpi_device(dev->parent);
+	if (!adev)
+		return 0;
+
+	dev_dbg(dev, "[match_rt5659_client]: is acpi device\n");
+	return 1;
+}
+
 static int __init xiaomi_mipad2_init(struct device *dev)
 {
+	struct device *client_dev;
+	struct i2c_client *client;
 	struct led_classdev *led_cdev;
 	int ret;
-
-	// rt5659 相关gpio初始化。GPIO_LOOKUP注册修复，这里不需要了
-	// gpio_request_one(593, GPIOF_OUT_INIT_HIGH, "ldo1-en");
-	// gpio_request_one(656, GPIOF_OUT_INIT_HIGH, "reset");
 
 	xiaomi_mipad2_led_pwm = devm_pwm_get(dev, "pwm_soc_lpss_2");
 	if (IS_ERR(xiaomi_mipad2_led_pwm))
@@ -889,12 +914,35 @@ static int __init xiaomi_mipad2_init(struct device *dev)
 	if (ret)
 		return dev_err_probe(dev, ret, "registering LED\n");
 
-	return software_node_register_node_group(ktd2026_node_group);
+	ret = software_node_register_node_group(ktd2026_node_group);
+	if (ret)
+		return dev_err_probe(dev, ret, "registering node_group\n");
+
+	ret = software_node_register(&rt5659_swnode);
+	if (ret)
+		return ret;
+
+	/* 在 I2C bus 上查找 RT5659 client */
+	client_dev = bus_find_device(&i2c_bus_type, NULL, NULL, match_rt5659_client);
+	if (!client_dev) {
+		pr_err("RT5659 I2C client not found\n");
+		goto END;
+	}
+
+	client = to_i2c_client(client_dev);
+	set_secondary_fwnode(&client->dev, software_node_fwnode(&rt5659_swnode));
+
+	put_device(client_dev);
+	pr_info("Bound software node to RT5659\n");
+
+END:
+	return 0;
 }
 
 static void xiaomi_mipad2_exit(void)
 {
 	software_node_unregister_node_group(ktd2026_node_group);
+	software_node_unregister(&rt5659_swnode);
 }
 
 /*

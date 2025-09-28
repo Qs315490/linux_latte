@@ -97,7 +97,7 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 		 * detection and button press.
 		 */
 		ret = snd_soc_dai_set_sysclk(codec_dai, RT5659_SCLK_S_RCCLK,
-					     48000 * 512, SND_SOC_CLOCK_IN);
+						 48000 * 512, SND_SOC_CLOCK_IN);
 		if (ret < 0) {
 			dev_err(card->dev, "failed to set codec sysclk: %d\n", ret);
 			return ret;
@@ -112,7 +112,8 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 static const struct snd_soc_dapm_widget cht_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
-	SND_SOC_DAPM_MIC("Int Mic", NULL),
+	SND_SOC_DAPM_MIC("Main Mic", NULL),
+	SND_SOC_DAPM_MIC("Aux Mic", NULL),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 	SND_SOC_DAPM_SUPPLY("Platform Clock", SND_SOC_NOPM, 0, 0,
 			platform_clock_control, SND_SOC_DAPM_PRE_PMU |
@@ -122,16 +123,33 @@ static const struct snd_soc_dapm_widget cht_dapm_widgets[] = {
 static const struct snd_soc_dapm_route cht_audio_map[] = {
 	{"IN1P", NULL, "Headset Mic"},
 	{"IN1N", NULL, "Headset Mic"},
-	{"IN3P", NULL, "Int Mic"},
-	{"IN3N", NULL, "Int Mic"},
-	{"IN4P", NULL, "Int Mic"},
-	{"IN4N", NULL, "Int Mic"},
-	{"Int Mic", NULL, "MICBIAS2"},
-	{"Int Mic", NULL, "MICBIAS3"},
+	{"IN3P", NULL, "Main Mic"},
+	{"IN3N", NULL, "Main Mic"},
+	{"IN4P", NULL, "Aux Mic"},
+	{"IN4N", NULL, "Aux Mic"},
+	{"Main Mic", NULL, "MICBIAS2"},
+	{"Aux Mic", NULL, "MICBIAS3"},
 	{"Headphone", NULL, "HPOL"},
 	{"Headphone", NULL, "HPOR"},
 	{"Ext Spk", NULL, "SPOL"},
 	{"Ext Spk", NULL, "SPOR"},
+
+	// 将 Mic 连接到 ADC（选择 ADC1 或 ADC2）
+	// 通常 ADC1 是主 ADC，用于录音
+	{"ADC1 L", NULL, "Main Mic"},
+	{"ADC1 R", NULL, "Main Mic"},
+	{"ADC1 L", NULL, "Aux Mic"},
+	{"ADC1 R", NULL, "Aux Mic"},
+	{"ADC1 L", NULL, "Headset Mic"},
+	{"ADC1 R", NULL, "Headset Mic"},
+
+	// 或者使用 ADC2（如果 ADC1 用于其他用途）
+	// {"ADC2 L", NULL, "Main Mic"},
+	// {"ADC2 R", NULL, "Main Mic"},
+
+	// ADC → AIF1 Capture（让 DAPM 知道录音路径）
+    {"AIF1 Capture", NULL, "ADC1 L"},
+    {"AIF1 Capture", NULL, "ADC1 R"},
 };
 
 static const struct snd_soc_dapm_route cht_audio_ssp0_map[] = {
@@ -155,7 +173,8 @@ static const struct snd_soc_dapm_route cht_audio_ssp2_map[] = {
 static const struct snd_kcontrol_new cht_mc_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Headphone"),
 	SOC_DAPM_PIN_SWITCH("Headset Mic"),
-	SOC_DAPM_PIN_SWITCH("Int Mic"),
+	SOC_DAPM_PIN_SWITCH("Main Mic"),
+	SOC_DAPM_PIN_SWITCH("Aux Mic"),
 	SOC_DAPM_PIN_SWITCH("Ext Spk"),
 };
 
@@ -205,8 +224,8 @@ static int cht_aif1_hw_params(struct snd_pcm_substream *substream,
 
 	/* set codec sysclk source to PLL */
 	ret = snd_soc_dai_set_sysclk(codec_dai, RT5659_SCLK_S_PLL1,
-				     params_rate(params) * 512,
-				     SND_SOC_CLOCK_IN);
+					 params_rate(params) * 512,
+					 SND_SOC_CLOCK_IN);
 	if (ret < 0) {
 		dev_err(rtd->dev, "can't set codec sysclk: %d\n", ret);
 		return ret;
@@ -247,12 +266,12 @@ static int cht_codec_init(struct snd_soc_pcm_runtime *runtime)
 
 	if (ctx->use_ssp0) {
 		ret = snd_soc_dapm_add_routes(&runtime->card->dapm,
-					      cht_audio_ssp0_map,
-					      ARRAY_SIZE(cht_audio_ssp0_map));
+						  cht_audio_ssp0_map,
+						  ARRAY_SIZE(cht_audio_ssp0_map));
 	} else {
 		ret = snd_soc_dapm_add_routes(&runtime->card->dapm,
-					      cht_audio_ssp2_map,
-					      ARRAY_SIZE(cht_audio_ssp2_map));
+						  cht_audio_ssp2_map,
+						  ARRAY_SIZE(cht_audio_ssp2_map));
 	}
 	if (ret)
 		return ret;
@@ -263,8 +282,8 @@ static int cht_codec_init(struct snd_soc_pcm_runtime *runtime)
 					 &ctx->headset,
 					 cht_bsw_headset_pins,
 					 ARRAY_SIZE(cht_bsw_headset_pins));
-        if (ret)
-                return ret;
+		if (ret)
+				return ret;
 
 	snd_jack_set_key(ctx->headset.jack, SND_JACK_BTN_0, KEY_PLAYPAUSE);
 	snd_jack_set_key(ctx->headset.jack, SND_JACK_BTN_1, KEY_VOLUMEUP);
@@ -299,19 +318,19 @@ static int cht_audio_init(struct snd_soc_pcm_runtime *runtime)
 	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(runtime, 0);
 	struct snd_soc_component *component = codec_dai->component;
 	struct cht_mc_private *ctx = snd_soc_card_get_drvdata(runtime->card);
-    int ret;
+	int ret;
 	struct snd_soc_card *card = runtime->card;
 
 	if (ctx->use_ssp0) {
 		ret = snd_soc_dapm_add_routes(&runtime->card->dapm,
-					      cht_audio_ssp0_map,
-					      ARRAY_SIZE(cht_audio_ssp0_map));
-        pr_debug("%s add cht_audio_ssp0_map got ret %d \n", __func__,ret);
+						  cht_audio_ssp0_map,
+						  ARRAY_SIZE(cht_audio_ssp0_map));
+		pr_debug("%s add cht_audio_ssp0_map got ret %d \n", __func__,ret);
 	} else {
 		ret = snd_soc_dapm_add_routes(&runtime->card->dapm,
-					      cht_audio_ssp2_map,
-					      ARRAY_SIZE(cht_audio_ssp2_map));
-        pr_debug("%s add cht_audio_ssp2_map got ret %d \n", __func__,ret);
+						  cht_audio_ssp2_map,
+						  ARRAY_SIZE(cht_audio_ssp2_map));
+		pr_debug("%s add cht_audio_ssp2_map got ret %d \n", __func__,ret);
 	}
 
 	int codec_gpio;
@@ -321,7 +340,7 @@ static int cht_audio_init(struct snd_soc_pcm_runtime *runtime)
 	pr_debug("Enter:%s", __func__);
 
 	/* Set codec bias level */
-    card->dapm.bias_level = SND_SOC_BIAS_OFF;
+	card->dapm.bias_level = SND_SOC_BIAS_OFF;
 	card->dapm.idle_bias_off = true;
 
 	desc = devm_gpiod_get_index(component->dev, NULL, 0, 0);
@@ -357,8 +376,8 @@ static int cht_audio_init(struct snd_soc_pcm_runtime *runtime)
 	mutex_init(&ctx->jack_mlock);
 
 	ret = snd_soc_jack_new(codec, "Intel MID Audio Jack",
-			       SND_JACK_HEADSET | SND_JACK_HEADPHONE | SND_JACK_BTN_0 |
-			       SND_JACK_BTN_1 | SND_JACK_BTN_2, &ctx->jack);
+				   SND_JACK_HEADSET | SND_JACK_HEADPHONE | SND_JACK_BTN_0 |
+				   SND_JACK_BTN_1 | SND_JACK_BTN_2, &ctx->jack);
 	if (ret) {
 		pr_err("jack creation failed\n");
 		return ret;
@@ -387,14 +406,15 @@ static int cht_audio_init(struct snd_soc_pcm_runtime *runtime)
 	snd_soc_dapm_enable_pin(&card->dapm, "Headset Mic");
 	snd_soc_dapm_enable_pin(&card->dapm, "Headphone");
 	snd_soc_dapm_enable_pin(&card->dapm, "Ext Spk");
-	snd_soc_dapm_enable_pin(&card->dapm, "Int Mic");
+	snd_soc_dapm_enable_pin(&card->dapm, "Main Mic");
+	snd_soc_dapm_enable_pin(&card->dapm, "Aux Mic");
 
 	snd_soc_dapm_sync(&card->dapm);
 	return ret;
 }
 
 static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
-			    struct snd_pcm_hw_params *params)
+				struct snd_pcm_hw_params *params)
 {
 	struct cht_mc_private *ctx = snd_soc_card_get_drvdata(rtd->card);
 	struct snd_interval *rate = hw_param_interval(params,
@@ -453,21 +473,21 @@ static int cht_codec_fixup(struct snd_soc_pcm_runtime *rtd,
 
 static int cht_aif1_startup(struct snd_pcm_substream *substream)
 {
-    struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
-    struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
-    struct snd_soc_dapm_widget_list *list_1;
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
+	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dapm_widget_list *list_1;
 	struct snd_soc_dapm_widget *widget;
 	int stream = 0;
 	int paths, i;
 
 	pr_info("%s runtime=%p\n", __func__, substream->runtime);
 
-    paths = snd_soc_dapm_dai_get_connected_widgets(cpu_dai, stream, &list_1, NULL);
-    pr_info("%d paths got\n", paths);
+	paths = snd_soc_dapm_dai_get_connected_widgets(cpu_dai, stream, &list_1, NULL);
+	pr_info("%d paths got\n", paths);
 
-    for_each_dapm_widgets(list_1, i, widget) {
-        pr_info("rt5659 path widget: name=%s, sname=%s\n", widget->name,widget->sname);
-    }
+	for_each_dapm_widgets(list_1, i, widget) {
+		pr_info("rt5659 path widget: name=%s, sname=%s\n", widget->name,widget->sname);
+	}
 
 	return snd_pcm_hw_constraint_single(substream->runtime,
 			SNDRV_PCM_HW_PARAM_RATE, 48000);
@@ -494,7 +514,7 @@ SND_SOC_DAILINK_DEF(ssp2_port,
 	DAILINK_COMP_ARRAY(COMP_CPU("ssp2-port")));
 SND_SOC_DAILINK_DEF(ssp2_codec,
 	DAILINK_COMP_ARRAY(COMP_CODEC("i2c-10EC5659:00",
-				      "rt5659-aif1")));
+					  "rt5659-aif1")));
 
 SND_SOC_DAILINK_DEF(platform,
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("sst-mfld-platform")));
@@ -504,14 +524,14 @@ SND_SOC_DAILINK_DEF(rt5659_aif2_cpu,
 
 SND_SOC_DAILINK_DEF(spk_l_codec,
 	DAILINK_COMP_ARRAY(COMP_CODEC("i2c-tfa9890:00",
-				      "tfa989x-hifi")));
+					  "tfa989x-hifi")));
 
 SND_SOC_DAILINK_DEF(spk_r_codec,
 	DAILINK_COMP_ARRAY(COMP_CODEC("i2c-tfa9890:01",
-				      "tfa989x-hifi")));
+					  "tfa989x-hifi")));
 
 static const struct snd_soc_pcm_stream nxp_tfa989x_params[] = {
-    {
+	{
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.rate_min = 48000,
 	.rate_max = 48000,
@@ -519,7 +539,7 @@ static const struct snd_soc_pcm_stream nxp_tfa989x_params[] = {
 	.channels_max = 2,
 	.rates = SNDRV_PCM_RATE_48000,
 	.sig_bits = 16,
-    },
+	},
 };
 
 static struct snd_soc_dai_link cht_dailink[] = {
@@ -554,7 +574,7 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.ops = &cht_be_ssp2_ops,
 		SND_SOC_DAILINK_REG(ssp2_port, ssp2_codec, platform),
 		.ignore_suspend = 1,
-        .ignore_pmdown_time = 1,
+		.ignore_pmdown_time = 1,
 	},
 	{
 		.name = "rt5659_AIF2-TFA989x_Speaker_L",
@@ -563,7 +583,7 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBS_CFS,
 		.c2c_params = nxp_tfa989x_params,
-        .num_c2c_params = 1,
+		.num_c2c_params = 1,
 	},{
 		.name = "rt5659_AIF2-TFA989x_Speaker_R",
 		.stream_name = "aif2-spk_r",
@@ -571,7 +591,7 @@ static struct snd_soc_dai_link cht_dailink[] = {
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			SND_SOC_DAIFMT_CBS_CFS,
 		.c2c_params = nxp_tfa989x_params,
-        .num_c2c_params = 1,
+		.num_c2c_params = 1,
 	},
 };
 
@@ -582,7 +602,7 @@ static int cht_suspend_pre(struct snd_soc_card *card)
 
 	for_each_card_components(card, component) {
 		if (!strncmp(component->name,
-			     ctx->codec_name, sizeof(ctx->codec_name))) {
+				 ctx->codec_name, sizeof(ctx->codec_name))) {
 
 			dev_dbg(component->dev, "disabling jack detect before going to suspend.\n");
 			//rt5659_jack_suspend(component);
@@ -599,7 +619,7 @@ static int cht_resume_post(struct snd_soc_card *card)
 
 	for_each_card_components(card, component) {
 		if (!strncmp(component->name,
-			     ctx->codec_name, sizeof(ctx->codec_name))) {
+				 ctx->codec_name, sizeof(ctx->codec_name))) {
 
 			dev_dbg(component->dev, "enabling jack detect for resume.\n");
 			//rt5659_jack_resume(component);
@@ -646,13 +666,13 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 	int dai_index = 0;
 	int i;
 
-    pr_info("cht-bsw-rt5659 mach pdev name %s\n", pdev->name);
+	pr_info("cht-bsw-rt5659 mach pdev name %s\n", pdev->name);
 
-    pr_info("cht-bsw-rt5659 mach id %s\n", mach->id);
-    pr_info("cht-bsw-rt5659 mach drv_name %s\n", mach->drv_name);
-    pr_info("cht-bsw-rt5659 mach fw_filename %s\n", mach->fw_filename);
+	pr_info("cht-bsw-rt5659 mach id %s\n", mach->id);
+	pr_info("cht-bsw-rt5659 mach drv_name %s\n", mach->drv_name);
+	pr_info("cht-bsw-rt5659 mach fw_filename %s\n", mach->fw_filename);
 
-    dev_dbg(&pdev->dev, "cht-bsw-rt5659 mach test 0\n");
+	dev_dbg(&pdev->dev, "cht-bsw-rt5659 mach test 0\n");
 
 	drv = devm_kzalloc(&pdev->dev, sizeof(*drv), GFP_KERNEL);
 	if (!drv)
@@ -663,16 +683,16 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 	/* find index of codec dai */
 	for (i = 0; i < ARRAY_SIZE(cht_dailink); i++) {
 		if (cht_dailink[i].codecs->name &&
-		    !strcmp(cht_dailink[i].codecs->name, RT5659_I2C_DEFAULT)) {
+			!strcmp(cht_dailink[i].codecs->name, RT5659_I2C_DEFAULT)) {
 			dai_index = i;
 			break;
 		}
 	}
-    if(i == ARRAY_SIZE(cht_dailink)){
-        pr_info("cht-bsw-rt5659 default codec name %s not found\n", drv->codec_name);
-    }
-    else{
-        pr_info("cht-bsw-rt5659 index %d dai codec name %s\n", dai_index, cht_dailink[dai_index].codecs->name);
+	if(i == ARRAY_SIZE(cht_dailink)){
+		pr_info("cht-bsw-rt5659 default codec name %s not found\n", drv->codec_name);
+	}
+	else{
+		pr_info("cht-bsw-rt5659 index %d dai codec name %s\n", dai_index, cht_dailink[dai_index].codecs->name);
 
 		/* fixup codec name based on HID */
 		adev = acpi_dev_get_first_match_dev(mach->id, NULL, -1);
@@ -683,24 +703,24 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 		}
 		acpi_dev_put(adev);
 
-        pr_info("cht-bsw-rt5659 acpi_device name %s\n", acpi_dev_name(adev));
-        pr_info("cht-bsw-rt5659 fixuped index %d dai codec name %s\n", dai_index, cht_dailink[dai_index].codecs->name);
+		pr_info("cht-bsw-rt5659 acpi_device name %s\n", acpi_dev_name(adev));
+		pr_info("cht-bsw-rt5659 fixuped index %d dai codec name %s\n", dai_index, cht_dailink[dai_index].codecs->name);
 
 		/* Use SSP0 on Bay Trail CR devices */
 		if (soc_intel_is_byt() && mach->mach_params.acpi_ipc_irq_index == 0) {
 			cht_dailink[dai_index].cpus->dai_name = "ssp0-port";
 			drv->use_ssp0 = true;
 		}
-    }
+	}
 
 	/* override platform name, if required */
 	snd_soc_card_cht.dev = &pdev->dev;
 	platform_name = mach->mach_params.platform;
-    pdata = mach->pdata;
+	pdata = mach->pdata;
 	//platform_name = padata->platform;
 
-    pr_info("cht-bsw-rt5659 mach platform_name %s\n", pdata->platform);
-    pr_info("cht-bsw-rt5659 mach test 1\n");
+	pr_info("cht-bsw-rt5659 mach platform_name %s\n", pdata->platform);
+	pr_info("cht-bsw-rt5659 mach test 1\n");
 
 	ret_val = snd_soc_fixup_dai_links_platform_name(&snd_soc_card_cht,
 							platform_name);
@@ -720,7 +740,7 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 
 	sof_parent = snd_soc_acpi_sof_parent(&pdev->dev);
 
-    pr_info("cht-bsw-rt5659 mach test 2\n");
+	pr_info("cht-bsw-rt5659 mach test 2\n");
 
 	/* set card and driver name */
 	if (sof_parent) {
@@ -744,7 +764,7 @@ static int snd_cht_mc_probe(struct platform_device *pdev)
 	}
 	platform_set_drvdata(pdev, &snd_soc_card_cht);
 
-    pr_info("cht-bsw-rt5659 mach test 3\n");
+	pr_info("cht-bsw-rt5659 mach test 3\n");
 
 	return ret_val;
 }
