@@ -112,8 +112,7 @@ static int platform_clock_control(struct snd_soc_dapm_widget *w,
 static const struct snd_soc_dapm_widget cht_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
-	SND_SOC_DAPM_MIC("Main Mic", NULL),
-	SND_SOC_DAPM_MIC("Aux Mic", NULL),
+	SND_SOC_DAPM_MIC("Int Mic", NULL),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 	SND_SOC_DAPM_SUPPLY("Platform Clock", SND_SOC_NOPM, 0, 0,
 			platform_clock_control, SND_SOC_DAPM_PRE_PMU |
@@ -123,12 +122,12 @@ static const struct snd_soc_dapm_widget cht_dapm_widgets[] = {
 static const struct snd_soc_dapm_route cht_audio_map[] = {
 	{"IN1P", NULL, "Headset Mic"},
 	{"IN1N", NULL, "Headset Mic"},
-	{"IN3P", NULL, "Main Mic"},
-	{"IN3N", NULL, "Main Mic"},
-	{"IN4P", NULL, "Aux Mic"},
-	{"IN4N", NULL, "Aux Mic"},
-	{"Main Mic", NULL, "MICBIAS2"},
-	{"Aux Mic", NULL, "MICBIAS3"},
+	{"IN3P", NULL, "Int Mic"},
+	{"IN3N", NULL, "Int Mic"},
+	{"IN4P", NULL, "Int Mic"},
+	{"IN4N", NULL, "Int Mic"},
+	{"Int Mic", NULL, "MICBIAS2"},
+	{"Int Mic", NULL, "MICBIAS3"},
 	{"Headphone", NULL, "HPOL"},
 	{"Headphone", NULL, "HPOR"},
 	{"Ext Spk", NULL, "SPOL"},
@@ -136,10 +135,8 @@ static const struct snd_soc_dapm_route cht_audio_map[] = {
 
 	// 将 Mic 连接到 ADC（选择 ADC1 或 ADC2）
 	// 通常 ADC1 是主 ADC，用于录音
-	{"ADC1 L", NULL, "Main Mic"},
-	{"ADC1 R", NULL, "Main Mic"},
-	{"ADC1 L", NULL, "Aux Mic"},
-	{"ADC1 R", NULL, "Aux Mic"},
+	{"ADC1 L", NULL, "Int Mic"},
+	{"ADC1 R", NULL, "Int Mic"},
 	{"ADC1 L", NULL, "Headset Mic"},
 	{"ADC1 R", NULL, "Headset Mic"},
 
@@ -173,8 +170,7 @@ static const struct snd_soc_dapm_route cht_audio_ssp2_map[] = {
 static const struct snd_kcontrol_new cht_mc_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Headphone"),
 	SOC_DAPM_PIN_SWITCH("Headset Mic"),
-	SOC_DAPM_PIN_SWITCH("Main Mic"),
-	SOC_DAPM_PIN_SWITCH("Aux Mic"),
+	SOC_DAPM_PIN_SWITCH("Int Mic"),
 	SOC_DAPM_PIN_SWITCH("Ext Spk"),
 };
 
@@ -406,8 +402,7 @@ static int cht_audio_init(struct snd_soc_pcm_runtime *runtime)
 	snd_soc_dapm_enable_pin(&card->dapm, "Headset Mic");
 	snd_soc_dapm_enable_pin(&card->dapm, "Headphone");
 	snd_soc_dapm_enable_pin(&card->dapm, "Ext Spk");
-	snd_soc_dapm_enable_pin(&card->dapm, "Main Mic");
-	snd_soc_dapm_enable_pin(&card->dapm, "Aux Mic");
+	snd_soc_dapm_enable_pin(&card->dapm, "Int Mic");
 
 	snd_soc_dapm_sync(&card->dapm);
 	return ret;
