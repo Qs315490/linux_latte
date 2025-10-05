@@ -132,21 +132,6 @@ static const struct snd_soc_dapm_route cht_audio_map[] = {
 	{"Headphone", NULL, "HPOR"},
 	{"Ext Spk", NULL, "SPOL"},
 	{"Ext Spk", NULL, "SPOR"},
-
-	// 将 Mic 连接到 ADC（选择 ADC1 或 ADC2）
-	// 通常 ADC1 是主 ADC，用于录音
-	{"ADC1 L", NULL, "Int Mic"},
-	{"ADC1 R", NULL, "Int Mic"},
-	{"ADC1 L", NULL, "Headset Mic"},
-	{"ADC1 R", NULL, "Headset Mic"},
-
-	// 或者使用 ADC2（如果 ADC1 用于其他用途）
-	// {"ADC2 L", NULL, "Main Mic"},
-	// {"ADC2 R", NULL, "Main Mic"},
-
-	// ADC → AIF1 Capture（让 DAPM 知道录音路径）
-    {"AIF1 Capture", NULL, "ADC1 L"},
-    {"AIF1 Capture", NULL, "ADC1 R"},
 };
 
 static const struct snd_soc_dapm_route cht_audio_ssp0_map[] = {
