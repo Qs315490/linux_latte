@@ -61,10 +61,7 @@ SectionVerb {
 SectionDevice."Speaker" {
 	Comment "Stereo Speakers"
 
-	ConflictingDevice [
-		# 还没实现，取消注释就报错了
-		# "Headphones"
-	]
+	ConflictingDevice []
 
 	Value {
 		# The speaker ampl. path on the 5659 has no speaker vol control
@@ -80,6 +77,51 @@ SectionDevice."Speaker" {
 	DisableSequence [
 		cset "name='DAC1 Playback Switch' off"
 	]
+}
+
+SectionDevice."IntMic" {
+	Comment "Microphone"
+
+	ConflictingDevice []
+
+	EnableSequence [
+		# 开启 Int Mic
+		cset "name='Int Mic Switch' on"
+		cset "name='RECMIX1L BST3 Switch' on"
+		cset "name='RECMIX1R BST4 Switch' on"
+		cset "name='STO1 ADC Capture Switch' on"
+
+		# 开启 Boost（如果需要）
+		cset "name='IN3 Boost Volume' 45"
+		cset "name='IN4 Boost Volume' 45"
+
+		# 设置 ADC 源 (选择录音混音器的输出作为 ADC 输入)
+		cset "name='Stereo1 ADC Source' 'ADC1'"
+		cset "name='Stereo1 ADC1 Source' 'ADC'"
+
+		# 设置录音混音器输出到 ADC
+		cset "name='Stereo1 ADC MIXL ADC1 Switch' on"
+		cset "name='Stereo1 ADC MIXR ADC1 Switch' on"
+		cset "name='DAC1 MIXL Stereo ADC Switch' off"
+		cset "name='DAC1 MIXR Stereo ADC Switch' off"
+		cset "name='media_loop2_out mix 0 codec_in0 Switch' on"
+		cset "name='pcm1_out mix 0 media_loop2_in Switch' on"
+
+		# 设置 ADC 音量
+		cset "name='IN Capture Volume' 23"
+		cset "name='STO1 ADC Capture Volume' 70"
+	]
+
+	DisableSequence [
+		cset "name='Int Mic Switch' off"
+	]
+
+	Value {
+		CapturePCM "hw:${CardId}"
+		# CaptureMixerElem "Int Mic"
+		CaptureVolume "IN Capture Volume"
+		CaptureSwitch "Int Mic Switch"
+	}
 }
 ```
 # 实验性设置方法
