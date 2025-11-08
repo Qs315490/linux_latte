@@ -126,7 +126,7 @@ SectionDevice."IntMic" {
 ```
 # 实验性设置方法
 复制audio下所有文件，保持目录结构复制到/usr/share/alsa/ucm2  
-修改文件所有者为root，组root。权限644
+修改文件所有者为root，组root。权限755
 
 # ~~设置声卡模式~~ 以下内容不需要了，已经修复
 ## 安装声音调整面板
